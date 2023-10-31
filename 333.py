@@ -1,86 +1,44 @@
-import pygame
-import random
+import telegram
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, MessageHandler, Filters
 
-# 初始化Pygame
-pygame.init()
+# 机器人的 API 令牌
+bot_token = '6867402496:AAFEfZUD-KANCVl0fGtZccRtEFLMqao_DCE'
 
-# 游戏窗口大小
-window_width = 800
-window_height = 600
+# 初始化 Telegram Bot
+bot = telegram.Bot(token=bot_token)
 
-# 颜色定义
-white = (255, 255, 255)
-blue = (0, 0, 255)
-red = (255, 0, 0)
+# 定义启动命令处理程序
+def start(update, context):
+    user = update.effective_user
+    keyboard = [
+        [InlineKeyboardButton("按钮1", callback_data='button1')],
+        [InlineKeyboardButton("按钮2", callback_data='button2')],
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    update.message.reply_text(
+        f"你好，{user.mention_markdown_v2()}！",
+        reply_markup=reply_markup
+    )
 
-# 创建游戏窗口
-screen = pygame.display.set_mode((window_width, window_height))
-pygame.display.set_caption("射击游戏")
+# 定义按钮回调处理程序
+def button(update, context):
+    query = update.callback_query
+    query.answer()
+    query.edit_message_text(text=f"你选择了按钮: {query.data}")
 
-# 玩家相关设置
-player_width = 50
-player_height = 50
-player_x = window_width // 2 - player_width // 2
-player_y = window_height - player_height - 10
-player_speed = 5
+# 定义文本消息处理程序
+def echo(update, context):
+    update.message.reply_text(update.message.text)
 
-# 敌人相关设置
-enemy_width = 50
-enemy_height = 50
-enemy_x = random.randint(0, window_width - enemy_width)
-enemy_y = 0
-enemy_speed = 3
+# 创建 Updater 和添加处理程序
+updater = Updater(token=bot_token, use_context=True)
+dispatcher = updater.dispatcher
 
-# 初始化分数
-score = 0
+dispatcher.add_handler(CommandHandler('start', start))
+dispatcher.add_handler(CallbackQueryHandler(button))
+dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, echo))
 
-# 游戏循环
-running = True
-clock = pygame.time.Clock()
-
-while running:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-
-    keys = pygame.key.get_pressed()
-    if keys[pygame.K_LEFT]:
-        player_x -= player_speed
-    if keys[pygame.K_RIGHT]:
-        player_x += player_speed
-
-    # 移动玩家
-    if player_x < 0:
-        player_x = 0
-    if player_x > window_width - player_width:
-        player_x = window_width - player_width
-
-    # 移动敌人
-    enemy_y += enemy_speed
-    if enemy_y > window_height:
-        enemy_x = random.randint(0, window_width - enemy_width)
-        enemy_y = 0
-        score += 1
-
-    # 检测碰撞
-    if player_x < enemy_x + enemy_width and player_x + player_width > enemy_x and player_y < enemy_y + enemy_height and player_y + player_height > enemy_y:
-        running = False
-
-    # 渲染背景
-    screen.fill(white)
-
-    # 渲染玩家
-    pygame.draw.rect(screen, blue, (player_x, player_y, player_width, player_height))
-
-    # 渲染敌人
-    pygame.draw.rect(screen, red, (enemy_x, enemy_y, enemy_width, enemy_height))
-
-    # 渲染分数
-    font = pygame.font.Font(None, 36)
-    text = font.render("分数: " + str(score), True, blue)
-    screen.blit(text, (10, 10))
-
-    pygame.display.update()
-    clock.tick(60)
-
-pygame.quit()
+# 启动机器人
+updater.start_polling()
+updater.idle()
